@@ -28,14 +28,9 @@ def descargar_video(url):
 
     ydl_opts = {
         'outtmpl': 'video.%(ext)s',
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
         'quiet': False,
-        'ffmpeg_location': '/usr/bin',  # ✅ Ruta de ffmpeg en Railway
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '96',
-        }],
+        'ffmpeg_location': '/usr/bin',
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
