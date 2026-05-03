@@ -30,6 +30,7 @@ def descargar_video(url):
         'outtmpl': 'video.%(ext)s',
         'format': 'bestaudio/best',
         'quiet': False,
+        'ffmpeg_location': '/usr/bin',  # ✅ Ruta de ffmpeg en Railway
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
