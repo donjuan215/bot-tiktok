@@ -3,7 +3,7 @@
 import os
 import glob
 import yt_dlp
-from groq import Groq
+from openai import OpenAI
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
@@ -11,9 +11,9 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTyp
 # 🔑 CONFIGURACIÓN
 # ==============================
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-client = Groq(api_key=GROQ_API_KEY)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ✅ FFmpeg disponible siempre
 os.environ["PATH"] += r";C:\ffmpeg"
@@ -77,7 +77,7 @@ def transcribir(ruta_audio):
     return transcripcion_completa.strip()
 
 # ==============================
-# ✨ RESUMIR CON GROQ
+# ✨ RESUMIR CON OPEN AI
 # ==============================
 
 def resumir(texto):
