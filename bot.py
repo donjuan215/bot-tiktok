@@ -49,31 +49,30 @@ from pydub import AudioSegment
 import math
 
 def transcribir(ruta_audio):
-    # Carga el audio
     audio = AudioSegment.from_mp3(ruta_audio)
     duracion_ms = len(audio)
-    chunk_ms = 10 * 60 * 1000  # 10 minutos por parte
+    chunk_ms = 10 * 60 * 1000
     total_partes = math.ceil(duracion_ms / chunk_ms)
-    
+
     transcripcion_completa = ""
-    
+
     for i in range(total_partes):
         inicio = i * chunk_ms
         fin = min((i + 1) * chunk_ms, duracion_ms)
         parte = audio[inicio:fin]
-        
+
         parte_path = f"parte_{i}.mp3"
         parte.export(parte_path, format="mp3")
-        
+
         with open(parte_path, "rb") as f:
             resultado = client.audio.transcriptions.create(
-                file=(parte_path, f),
-                model="whisper-large-v3-turbo",
+                file=f,
+                model="whisper-1",
                 response_format="text"
             )
         transcripcion_completa += resultado + " "
         os.remove(parte_path)
-    
+
     return transcripcion_completa.strip()
 
 # ==============================
@@ -87,7 +86,7 @@ def resumir(texto):
     for parte in partes:
         prompt_parte = "Resume brevemente este fragmento en 3 puntos clave:\n\n" + parte
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt_parte}]
         )
         resumenes.append(response.choices[0].message.content)
@@ -96,7 +95,7 @@ def resumir(texto):
     prompt_final = "Basándote en estos resúmenes parciales, crea un resumen final estructurado:\n\n- Idea principal\n- Problemas clave\n- Soluciones\n- Frases clave\n\nResúmenes:\n" + texto_resumenes
 
     resumen_final = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt_final}]
     )
 
