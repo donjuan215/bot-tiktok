@@ -42,13 +42,21 @@ def descargar_video(url):
     return archivos[0]
 
 # ==============================
-# 🧠 TRANSCRIBIR CON GROQ
+# 🧠 TRANSCRIBIR CON OPENAI WHISPER
 # ==============================
 
 from pydub import AudioSegment
 import math
 
 def transcribir(ruta_audio):
+    # Detectar formato y convertir a mp3 si es necesario
+    ext = ruta_audio.split(".")[-1].lower()
+    if ext != "mp3":
+        audio = AudioSegment.from_file(ruta_audio)
+        ruta_mp3 = ruta_audio.replace(f".{ext}", ".mp3")
+        audio.export(ruta_mp3, format="mp3")
+        ruta_audio = ruta_mp3
+
     audio = AudioSegment.from_mp3(ruta_audio)
     duracion_ms = len(audio)
     chunk_ms = 10 * 60 * 1000
@@ -76,30 +84,39 @@ def transcribir(ruta_audio):
     return transcripcion_completa.strip()
 
 # ==============================
-# ✨ RESUMIR CON OPEN AI
+# ✨ RESUMIR CON OPENAI
 # ==============================
 
-def resumir(texto):
-    partes = [texto[i:i+8000] for i in range(0, len(texto), 8000)]
-    resumenes = []
-
-    for parte in partes:
-        prompt_parte = "Resume brevemente este fragmento en 3 puntos clave:\n\n" + parte
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt_parte}]
-        )
-        resumenes.append(response.choices[0].message.content)
-
-    texto_resumenes = " ".join(resumenes)
-    prompt_final = "Basándote en estos resúmenes parciales, crea un resumen final estructurado:\n\n- Idea principal\n- Problemas clave\n- Soluciones\n- Frases clave\n\nResúmenes:\n" + texto_resumenes
-
-    resumen_final = client.chat.completions.create(
+def resumir_parte(texto):
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt_final}]
+        messages=[{"role": "user", "content": "Resume brevemente este fragmento en 3 puntos clave bien explicados:\n\n" + texto}],
+        max_tokens=500,
+        timeout=60
     )
+    return response.choices[0].message.content
 
-    return resumen_final.choices[0].message.content
+def resumir_final(resumenes):
+    texto = " ".join(resumenes)[:8000]
+    prompt = """Basándote en estos resúmenes, crea un resumen final muy completo y bien explicado con estas secciones:
+
+📌 Idea Principal
+🔍 Desarrollo y Puntos Clave
+⚠️ Problemas o Retos
+✅ Soluciones o Conclusiones
+💬 Frases o Conceptos Importantes
+
+Resúmenes:
+""" + texto
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1500,
+        timeout=60
+    )
+    return response.choices[0].message.content
+
 # ==============================
 # 🧹 LIMPIAR ARCHIVOS
 # ==============================
@@ -138,8 +155,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ No se detectó voz en el video.")
             return
 
-        await update.message.reply_text("✨ Resumiendo...")
-        resultado = resumir(texto)
+        await update.message.reply_text("✨ Generando resumen, esto puede tomar un momento...")
+
+        partes = [texto[i:i+6000] for i in range(0, len(texto), 6000)]
+        resumenes = []
+
+        for i, parte in enumerate(partes):
+            await update.message.reply_text(f"📝 Procesando parte {i+1} de {len(partes)}...")
+            resumen = resumir_parte(parte)
+            resumenes.append(resumen)
+
+        await update.message.reply_text("🔄 Consolidando resumen final...")
+        resultado = resumir_final(resumenes)
         await update.message.reply_text(resultado)
 
     except Exception as e:
